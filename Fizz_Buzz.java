@@ -1,7 +1,3 @@
-
-import java.util.ArrayList;
-import java.util.List;
-
 public class Fizz_Buzz {
     public static void main(String[] args) {
 
@@ -24,26 +20,9 @@ public class Fizz_Buzz {
 //     }
 // }
 
-        int n = 15;
-
-        List<String> result = new ArrayList<>();
-
-        for (int i = 1; i <= n; i++) {
-            String str = "";
-
-            if (i % 3 == 0 && i % 5 == 0) {
-                System.out.print("FizzBizz ");
-            } else 
-            if (i % 3 == 0) str += "Fizz ";
-            if (i % 5 == 0) str += "Bizz ";
-            
-        }
 
 
-
-
-
-
+        int n = 15; 
 
         for (int i = 1; i <= n; i++) {
             if (i % 3 == 0 && i % 5 == 0) {
