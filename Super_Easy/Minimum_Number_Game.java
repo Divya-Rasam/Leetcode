@@ -7,8 +7,6 @@ public class Minimum_Number_Game {
 
     // Output: [3,2,5,4]
 
-    
-
     // bubble sort 
 
     for ( int i = 0; i < nums.length; i++) {
@@ -22,12 +20,12 @@ public class Minimum_Number_Game {
         }
     }
 
-    for (int arr : nums) {
-        System.out.print(arr + " ");
-    }
+    // for (int arr : nums) {
+    //     System.out.print(arr + " ");
+    // }
 
 
-    System.out.println();
+    // System.out.println();
 
     int [] arr = new int[nums.length]; 
 
@@ -40,11 +38,22 @@ public class Minimum_Number_Game {
         System.out.print(array + " ");
     }
 
-
-
-
-
-
     }
 
 }
+
+
+
+// class Solution {
+//     public int[] numberGame(int[] nums) {
+//         Arrays.sort(nums);
+//         // Step 2: Create result array
+//         int[] arr = new int[nums.length];
+//         // Step 3: Swap pairs
+//         for (int i = 0; i < nums.length; i += 2) {
+//             arr[i] = nums[i + 1];   // Bob’s turn (he appends first)
+//             arr[i + 1] = nums[i];   // Alice’s turn (she appends next)
+//         }
+//         return arr;
+//     }
+// }
