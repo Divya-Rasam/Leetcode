@@ -24,8 +24,8 @@ public class Minimum_Number_Game {
     //     System.out.print(arr + " ");
     // }
 
-
     // System.out.println();
+    
 
     int [] arr = new int[nums.length]; 
 
