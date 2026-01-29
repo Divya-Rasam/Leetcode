@@ -1,3 +1,4 @@
+package leetcode_basics;
 public class Fizz_Buzz {
     public static void main(String[] args) {
 
@@ -36,12 +37,7 @@ public class Fizz_Buzz {
             }
         }
 
-
-
-
-
-
-
+        
 
 
     }
