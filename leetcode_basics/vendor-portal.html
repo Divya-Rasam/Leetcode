@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Portal - Assignment</title>
+    <!-- Using Tailwind via CDN to save time on CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <!-- ==================== AUTH SECTION ==================== -->
+    <div id="auth-section" class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
+            <h1 class="text-2xl font-bold mb-6 text-center text-blue-600">Vendor Portal</h1>
+            
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium">Username</label>
+                    <input type="text" id="login-user" class="w-full border p-2 rounded" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Password</label>
+                    <input type="password" id="login-pass" class="w-full border p-2 rounded" placeholder="admin">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Login</button>
+                <p class="text-sm text-center">New vendor? <a href="#" onclick="toggleAuth('register')" class="text-blue-500">Register here</a></p>
+            </form>
+
+            <!-- Register Form (Hidden by default) -->
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium">Company Name</label>
+                    <input type="text" id="reg-company" class="w-full border p-2 rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Username</label>
+                    <input type="text" id="reg-user" class="w-full border p-2 rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Password</label>
+                    <input type="password" id="reg-pass" class="w-full border p-2 rounded" required>
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">Register</button>
+                <p class="text-sm text-center">Back to <a href="#" onclick="toggleAuth('login')" class="text-blue-500">Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== APP DASHBOARD (Hidden until login) ==================== -->
+    <div id="app-section" class="hidden min-h-screen flex">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-800 text-white flex flex-col">
+            <div class="p-4 font-bold text-xl border-b border-slate-700">VendorPortal</div>
+            <nav class="flex-1 p-4 space-y-2">
+                <div id="admin-nav" class="hidden">
+                    <button onclick="renderAdminDashboard()" class="block w-full text-left p-2 hover:bg-slate-700 rounded">Dashboard</button>
+                </div>
+                <div id="vendor-nav" class="hidden">
+                    <button onclick="renderVendorDashboard()" class="block w-full text-left p-2 hover:bg-slate-700 rounded">My Sales</button>
+                    <button onclick="renderVendorProducts()" class="block w-full text-left p-2 hover:bg-slate-700 rounded">My Products</button>
+                </div>
+            </nav>
+            <div class="p-4 border-t border-slate-700">
+                <span id="user-display" class="text-sm text-gray-400 block mb-2"></span>
+                <button onclick="logout()" class="w-full bg-red-500 text-white p-2 rounded text-sm">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            <div id="content-area">
+                <!-- Dynamic content loads here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // --- GLOBAL STATE & DB (Simulated Backend) ---
+        // Using LocalStorage to persist data so reviewer doesn't lose data on refresh
+        const defaultUsers = [
+            { id: 1, user: 'admin', pass: 'admin', role: 'admin', name: 'System Admin', status: 'active' }
+        ];
+
+        let db = {
+            users: JSON.parse(localStorage.getItem('vp_users')) || defaultUsers,
+            products: JSON.parse(localStorage.getItem('vp_products')) || [],
+            orders: JSON.parse(localStorage.getItem('vp_orders')) || []
+        };
+
+        let currentUser = null;
+
+        // Save helper
+        function saveDB() {
+            localStorage.setItem('vp_users', JSON.stringify(db.users));
+            localStorage.setItem('vp_products', JSON.stringify(db.products));
+            localStorage.setItem('vp_orders', JSON.stringify(db.orders));
+        }
+
+        // --- AUTH FUNCTIONS ---
+        
+        function toggleAuth(view) {
+            document.getElementById('login-form').classList.toggle('hidden', view !== 'login');
+            document.getElementById('register-form').classList.toggle('hidden', view !== 'register');
+        }
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            
+            const user = db.users.find(x => x.user === u && x.pass === p);
+            
+            if (user) {
+                if (user.status === 'blocked') return alert('Account blocked by Admin.');
+                // Logic: If vendor is pending, maybe let them login but show message?
+                // Requirement says "Admin controls approvals", let's block login if pending.
+                if (user.role === 'vendor' && user.status === 'pending') {
+                    return alert('Account pending approval from Admin.');
+                }
+
+                currentUser = user;
+                initApp();
+            } else {
+                alert('Invalid credentials');
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const company = document.getElementById('reg-company').value;
+            const user = document.getElementById('reg-user').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            if (db.users.find(x => x.user === user)) return alert('Username taken');
+
+            db.users.push({
+                id: Date.now(),
+                user: user,
+                pass: pass,
+                role: 'vendor',
+                name: company,
+                status: 'pending' // Default to pending
+            });
+            saveDB();
+            alert('Registration successful. Please wait for Admin approval.');
+            toggleAuth('login');
+        });
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('app-section').classList.add('hidden');
+            document.getElementById('auth-section').classList.remove('hidden');
+        }
+
+        // --- APP INITIALIZATION ---
+
+        function initApp() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
+            document.getElementById('user-display').innerText = `Logged in as: ${currentUser.name} (${currentUser.role})`;
+
+            // Show correct nav
+            if (currentUser.role === 'admin') {
+                document.getElementById('admin-nav').classList.remove('hidden');
+                renderAdminDashboard();
+            } else {
+                document.getElementById('vendor-nav').classList.remove('hidden');
+                renderVendorDashboard();
+            }
+        }
+
+        // --- ADMIN LOGIC ---
+
+        function renderAdminDashboard() {
+            const container = document.getElementById('content-area');
+            const vendors = db.users.filter(u => u.role === 'vendor');
+            const products = db.products;
+
+            let html = `
+                <h2 class="text-2xl font-bold mb-6">Admin Dashboard</h2>
+                
+                <div class="bg-white p-4 rounded shadow mb-6">
+                    <h3 class="font-bold mb-2">Vendor Approvals</h3>
+                    <button onclick="simulateSales()" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm mb-4">Simulate Sales (For Demo)</button>
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="border-b"><th>Company</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody>
+            `;
+
+            vendors.forEach(v => {
+                html += `
+                    <tr class="border-b">
+                        <td class="p-2">${v.name} (${v.user})</td>
+                        <td class="p-2">${v.status}</td>
+                        <td class="p-2">
+                            ${v.status === 'pending' ? `<button onclick="updateVendorStatus(${v.id}, 'active')" class="text-green-600 underline">Approve</button>` : ''}
+                            ${v.status === 'active' ? `<button onclick="updateVendorStatus(${v.id}, 'blocked')" class="text-red-600 underline">Block</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+
+            html += `
+                <div class="bg-white p-4 rounded shadow">
+                    <h3 class="font-bold mb-2">Product Moderation</h3>
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="border-b"><th>Product</th><th>Vendor</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody>
+            `;
+
+            products.forEach(p => {
+                const vendorName = db.users.find(u => u.id === p.vendorId)?.name || 'Unknown';
+                html += `
+                    <tr class="border-b">
+                        <td class="p-2">${p.name} - $${p.price}</td>
+                        <td class="p-2">${vendorName}</td>
+                        <td class="p-2">${p.status}</td>
+                        <td class="p-2">
+                             ${p.status === 'pending' ? `<button onclick="updateProductStatus(${p.id}, 'active')" class="text-green-600 underline">Approve</button>` : ''}
+                             ${p.status === 'active' ? `<button onclick="updateProductStatus(${p.id}, 'blocked')" class="text-red-600 underline">Block</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function updateVendorStatus(id, status) {
+            const u = db.users.find(x => x.id === id);
+            if(u) {
+                u.status = status;
+                saveDB();
+                renderAdminDashboard(); // Refresh
+                alert(`Vendor ${status}`);
+            }
+        }
+
+        function updateProductStatus(id, status) {
+            const p = db.products.find(x => x.id === id);
+            if(p) {
+                p.status = status;
+                saveDB();
+                renderAdminDashboard();
+                alert(`Product ${status}`);
+            }
+        }
+
+        // --- VENDOR LOGIC ---
+
+        function renderVendorDashboard() {
+            const container = document.getElementById('content-area');
+            const myOrders = db.orders.filter(o => o.vendorId === currentUser.id);
+            const total = myOrders.reduce((sum, o) => sum + (o.price * o.qty), 0);
+
+            let html = `
+                <h2 class="text-2xl font-bold mb-6">My Dashboard</h2>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded shadow">
+                        <div class="text-gray-500">Total Revenue</div>
+                        <div class="text-2xl font-bold">$${total.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded shadow">
+                        <div class="text-gray-500">Orders</div>
+                        <div class="text-2xl font-bold">${myOrders.length}</div>
+                    </div>
+                </div>
+
+                <h3 class="font-bold mb-2">Recent Orders</h3>
+                <div class="bg-white p-4 rounded shadow overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead><tr class="border-b"><th>Product</th><th>Qty</th><th>Total</th><th>Date</th><th>Action</th></tr></thead>
+                        <tbody>
+            `;
+
+            if(myOrders.length === 0) {
+                html += `<tr><td colspan="5" class="p-4 text-center text-gray-500">No sales yet. Admin needs to approve your products and simulate sales.</td></tr>`;
+            } else {
+                myOrders.forEach(o => {
+                    html += `
+                        <tr class="border-b">
+                            <td class="p-2">${o.productName}</td>
+                            <td class="p-2">${o.qty}</td>
+                            <td class="p-2">$${(o.price * o.qty).toFixed(2)}</td>
+                            <td class="p-2">${new Date(o.date).toLocaleDateString()}</td>
+                            <td class="p-2"><button onclick="downloadInvoice('${o.id}')" class="text-blue-600 underline">Download PDF</button></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderVendorProducts() {
+            const container = document.getElementById('content-area');
+            const myProducts = db.products.filter(p => p.vendorId === currentUser.id);
+
+            let html = `
+                <h2 class="text-2xl font-bold mb-6">Manage Products</h2>
+                
+                <div class="bg-white p-6 rounded shadow mb-6">
+                    <h3 class="font-bold mb-4">Add New Product</h3>
+                    <form onsubmit="addProduct(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="p-name" placeholder="Product Name" class="border p-2 rounded" required>
+                        <input type="number" id="p-price" placeholder="Price" step="0.01" class="border p-2 rounded" required>
+                        <button type="submit" class="bg-blue-600 text-white rounded hover:bg-blue-700">Add Product</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded shadow">
+                    <table class="w-full text-left">
+                        <thead><tr class="border-b"><th>Name</th><th>Price</th><th>Status</th></tr></thead>
+                        <tbody>
+            `;
+
+            myProducts.forEach(p => {
+                html += `
+                    <tr class="border-b">
+                        <td class="p-2">${p.name}</td>
+                        <td class="p-2">$${p.price}</td>
+                        <td class="p-2"><span class="px-2 py-1 rounded text-xs text-white ${p.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}">${p.status}</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function addProduct(e) {
+            e.preventDefault();
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+
+            db.products.push({
+                id: Date.now(),
+                vendorId: currentUser.id,
+                name: name,
+                price: parseFloat(price),
+                status: 'pending' // Requires approval
+            });
+            saveDB();
+            alert('Product added! It is pending Admin approval.');
+            renderVendorProducts();
+        }
+
+        function downloadInvoice(orderId) {
+            // Simple print simulation
+            const order = db.orders.find(o => o.id == orderId);
+            if(!order) return;
+
+            const total = order.price * order.qty;
+            const content = `
+                <h1>INVOICE #${order.id}</h1>
+                <p>Date: ${new Date(order.date).toLocaleDateString()}</p>
+                <hr>
+                <p>Product: ${order.productName}</p>
+                <p>Quantity: ${order.qty}</p>
+                <p>Total: $${total}</p>
+            `;
+            
+            const win = window.open('', '', 'width=400,height=400');
+            win.document.write(content);
+            win.document.close();
+            win.print();
+        }
+
+        // --- UTILS FOR DEMO ---
+        
+        function simulateSales() {
+            // Generate random sales for active products
+            const activeProducts = db.products.filter(p => p.status === 'active');
+            if(activeProducts.length === 0) {
+                alert("No active products to generate sales for!");
+                return;
+            }
+
+            // Create 3 random orders
+            for(let i=0; i<3; i++) {
+                const p = activeProducts[Math.floor(Math.random() * activeProducts.length)];
+                db.orders.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    vendorId: p.vendorId,
+                    productName: p.name,
+                    price: p.price,
+                    qty: Math.floor(Math.random() * 5) + 1,
+                    date: new Date().toISOString()
+                });
+            }
+            saveDB();
+            alert("Simulated 3 new orders!");
+            if(currentUser.role === 'vendor') renderVendorDashboard(); // Refresh if needed
+        }
+
+    </script>
+</body>
+</html>
