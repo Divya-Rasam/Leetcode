@@ -1,4 +1,4 @@
-package Max_Consecutive_Ones;
+package 1_Introduction.Max_Consecutive_Ones;
 
 public class MaxConsecutiveOnes {
     public static void main(String[] args) {
